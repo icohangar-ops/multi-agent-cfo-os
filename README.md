@@ -83,9 +83,38 @@ third-party validation  -->  status = LOCKED
 | Context Engine | Custom entity/event/task graph with cosine dedup |
 | Agent Protocol | Cognitive Mesh Protocol (expansion/compression cycles) |
 | Decision Governance | Consensus Hardening Protocol (CHP) |
-| Database | CockroachDB (via SQLAlchemy) |
+| Database | [SpacetimeDB](https://spacetimedb.com) v2.4 (was CockroachDB) |
 | CLI | argparse (stdlib), entry point `cfo-os` |
 | Testing | pytest 8.0+ |
+
+## Why SpacetimeDB?
+
+The Multi-Agent CFO OS was originally backed by CockroachDB — a solid distributed SQL database for OLTP workloads. But the architecture points in a fundamentally different direction: **real-time multi-agent collaboration with live audit trails and synchronous state propagation across agents.** SpacetimeDB was chosen for four reasons:
+
+### 1. Agents Need Real-Time Shared Context, Not a Query Layer
+
+The Cognitive Mesh requires Finance, Strategy, and Compliance agents to read and write to a shared context engine in sequence. With CockroachDB, this meant SQLAlchemy ORM calls, connection pooling, and query latency between every agent turn. With SpacetimeDB, agents connect directly as clients and write to shared tables via reducers. State changes propagate instantly — the `SharedContextEntity` table updates are visible to the next agent in the topological chain immediately, with zero database round-trip overhead beyond the reducer call.
+
+### 2. The CHP State Machine Maps Perfectly to SpacetimeDB Reducers
+
+The Consensus Hardening Protocol has explicit state transitions: `EXPLORING → PROVISIONAL → PROVISIONAL_LOCK → LOCKED`. In SpacetimeDB, the `update_decision_state` reducer atomically reads the current `DecisionCase` status, validates the transition, and writes the new state — all within a single ACID transaction. No ORM transaction management, no migration scripts, no connection pooling.
+
+### 3. Audit Trail as a Live Subscription Stream
+
+The `AuditEntry` table records every claim, grounding, and CHP finding with full provenance. Previously, the audit trail was written to CockroachDB and only visible when someone ran a query. With SpacetimeDB, the audit trail is a **subscription stream** — dashboards, compliance tools, and board portals can subscribe to `AuditEntry` for a specific `decision_id` and see every new finding appear in real-time as agents deliberate.
+
+### 4. Single Binary, Zero DevOps
+
+```
+Before: Python agents + CockroachDB cluster + SQLAlchemy ORM + connection pooling + schema migrations
+After:  Python agents + single SpacetimeDB module (with the SpacetimeClient SDK)
+```
+
+The entire database layer is now a SpacetimeDB Rust module at `spacetime/spacetimedb/` with a Python SDK client at `spacetime/client.py`. The `SpacetimeClient` class wraps table operations and reducers so the existing `cme` package can be adapted with minimal changes. A `migrate_from_cockroach()` method provides a clean migration path for existing data.
+
+### 5. Multi-User Collaboration Becomes Trivial
+
+What was a single-user CLI tool becomes a multi-user system for free. Multiple instances of the CLI (or a future web frontend) can subscribe to the same `Brief` table and see new CFO tasks appear instantly. The SpacetimeDB identity system provides per-user authentication built-in.
 
 ## Key Features
 
