@@ -145,7 +145,7 @@ What was a single-user CLI tool becomes a multi-user system for free. Multiple i
 
 ```bash
 # Clone the repository
-git clone https://github.com/zan-maker/multi-agent-cfo-os.git
+git clone https://github.com/icohangar-ops/multi-agent-cfo-os.git
 cd multi-agent-cfo-os
 
 # Install in editable mode
