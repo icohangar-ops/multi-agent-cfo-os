@@ -31,6 +31,8 @@ from typing import Any, Callable, List, Optional
 
 import requests
 
+from cubiczan_resilience import resilient
+
 logger = logging.getLogger("cfo_os.spacetime")
 
 # ---------------------------------------------------------------------------
@@ -186,25 +188,65 @@ class SpacetimeClient:
     def _url(self, *parts: str) -> str:
         return f"{self.host}/{'/'.join(p.strip('/') for p in parts)}"
 
-    def _reduce(self, reducer_name: str, args: List[Any]) -> dict:
-        """Call a SpacetimeDB reducer via POST /v1/database/:db/reduce."""
-        payload = json.dumps({"fn": reducer_name, "args": args})
-        url = self._url("v1", "database", self.db_name, "reduce")
-        logger.debug("POST %s body=%s", url, payload[:500])
+    @resilient(timeout=30, max_attempts=3)
+    def _post(self, url: str, payload: str) -> "requests.Response":
+        """Issue the POST and return the raw response.
 
+        Only transient network/transport failures are raised here, so the
+        ``@resilient`` retry/backoff/circuit-breaker applies *only* to those
+        errors — never to a reducer that returned a permanent HTTP error.
+        """
         try:
-            resp = self._session.post(
+            return self._session.post(
                 url,
                 data=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=self._timeout,
             )
         except requests.RequestException as exc:
+            logger.warning(
+                "spacetime transient network error event=post url=%s error=%s",
+                url,
+                exc,
+            )
             raise ConnectionError_Spacetime(
                 f"Cannot reach SpacetimeDB at {url}: {exc}"
             ) from exc
 
+    @resilient(timeout=30, max_attempts=3)
+    def _get(self, url: str) -> "requests.Response":
+        """Issue the GET and return the raw response (transient errors retried)."""
+        try:
+            return self._session.get(url, timeout=self._timeout)
+        except requests.RequestException as exc:
+            logger.warning(
+                "spacetime transient network error event=get url=%s error=%s",
+                url,
+                exc,
+            )
+            raise ConnectionError_Spacetime(
+                f"Cannot reach SpacetimeDB at {url}: {exc}"
+            ) from exc
+
+    def _reduce(self, reducer_name: str, args: List[Any]) -> dict:
+        """Call a SpacetimeDB reducer via POST /v1/database/:db/reduce."""
+        payload = json.dumps({"fn": reducer_name, "args": args})
+        url = self._url("v1", "database", self.db_name, "reduce")
+        logger.debug("POST %s body=%s", url, payload[:500])
+
+        # Transient network failures are retried with exponential backoff
+        # inside _post; if all attempts fail it raises ConnectionError_Spacetime.
+        resp = self._post(url, payload)
+
         if resp.status_code not in (200, 204):
+            # Permanent reducer failure — NOT retried, surfaced as a distinct
+            # structured log so operators can tell it apart from network errors.
+            logger.error(
+                "spacetime reducer failure event=reduce reducer=%s status=%s body=%s",
+                reducer_name,
+                resp.status_code,
+                resp.text[:500],
+            )
             raise ReducerError(
                 f"Reducer '{reducer_name}' failed (HTTP {resp.status_code}): "
                 f"{resp.text[:500]}"
@@ -220,14 +262,18 @@ class SpacetimeClient:
         url = self._url("v1", "database", self.db_name, "scan", table)
         logger.debug("GET %s", url)
 
-        try:
-            resp = self._session.get(url, timeout=self._timeout)
-        except requests.RequestException as exc:
-            raise ConnectionError_Spacetime(
-                f"Cannot reach SpacetimeDB at {url}: {exc}"
-            ) from exc
+        # Transient network failures are retried with exponential backoff
+        # inside _get; if all attempts fail it raises ConnectionError_Spacetime.
+        resp = self._get(url)
 
         if resp.status_code != 200:
+            # Permanent scan failure — NOT retried; distinct structured log.
+            logger.error(
+                "spacetime scan failure event=scan table=%s status=%s body=%s",
+                table,
+                resp.status_code,
+                resp.text[:500],
+            )
             raise SpacetimeError(
                 f"Scan '{table}' failed (HTTP {resp.status_code}): {resp.text[:500]}"
             )
