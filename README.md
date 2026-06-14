@@ -1,162 +1,76 @@
-# Multi-Agent CFO Operating System
+<div align="center">
 
-Multi-agent collaboration platform that automates CFO-grade financial decision-making through a Cognitive Mesh of specialist agents hardened by a Consensus Hardening Protocol -- producing forecasts, investment cases, and board outputs with a single auditable reasoning trail.
+# MeshCFO
+
+**The auditable multi-agent CFO.** Every board-ready claim traces to the agent that produced it, the reasoning step, the grounding source, and the adversarial review that tested it.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](tests/)
 
+</div>
+
 ---
 
-## Overview
+## The Problem
 
-A single CFO task -- "build the FY plan", "fund the enterprise tier", "approve the board ask" -- usually fragments across three failure modes: context fragmentation across departments, reasoning opacity in the final output, and soft consensus that looks unanimous because assumptions were never adversarially reviewed.
+A single CFO task — "build the FY plan", "fund the enterprise tier", "approve the board ask" — fragments across three failure modes:
 
-Multi-Agent CFO OS solves all three by fusing two well-specified frameworks into one system. The **Cognitive Mesh** layer coordinates three specialist agents (Finance, Strategy, and Compliance) that reason on a shared context engine with visible expansion/compression reasoning cycles and self-improving playbooks. The **Consensus Hardening Protocol (CHP)** wraps every session in decision governance with foundation disclosure, adversarial assumption attacks, R0 gate checks, and explicit lock progression from EXPLORING through PROVISIONAL_LOCK to LOCKED.
+1. **Context fragmentation** across departments
+2. **Reasoning opacity** in the final output — nobody can trace *why* a number landed where it did
+3. **Soft consensus** that looks unanimous because assumptions were never adversarially reviewed
 
-Every line in the final CFO artifact traces back to the agent that produced it, the expansion step in that agent's reasoning, the grounding source and confidence level, and the CHP foundation findings that hardened or weakened the claim. The result is a board-ready markdown document with complete provenance -- suitable for audit committees, board presentations, and regulatory compliance.
+MeshCFO solves all three. The result is a board-ready document with **complete provenance** — suitable for audit committees, board presentations, and regulatory compliance.
 
-## Architecture
+---
 
-```
-                       ┌──────────────────────────────┐
-  ┌───── shared ──────>│        ContextEngine          |<───── shared ─────┐
-  │                     │  (entities / events / tasks   │                    │
-  │                     │   + short / long memory)       │                    │
-  │                     └──────────────────────────────┘                    │
-  v                                                                       v
-┌────────────────────┐    ┌────────────────────┐    ┌────────────────────────┐
-│ Finance Agent       │    │ Strategy Agent     │    │ Compliance Agent      │
-│  ├─ Playbook (ACE)  │    │  ├─ Playbook (ACE) │    │  ├─ Playbook (ACE)   │
-│  └─ Protocol (CMP)  │    │  └─ Protocol (CMP) │    │  └─ Protocol (CMP)   │
-└──────────┬─────────┘    └──────────┬─────────┘    └──────────┬───────────┘
-           │ produces               │ consumes+produces          │ consumes
-           v                        v                            v
-      budget_envelope          market_positioning           risk_register
-      roi_model                go_to_market                 mitigations
-           │                        │                            │
-           └──────────────┬─────────┴──────────────┬─────────────┘
-                          v                        v
-                 ┌──────────────────────────────────────────┐
-                 │           CFOOperatingSystem              │
-                 │   1. CHP DecisionCase + Foundation         │
-                 │   2. EnterpriseOrchestrator (Mesh)        │
-                 │   3. Lock progression (EXPLORING > LOCK)  │
-                 │   4. CFOArtifact + AuditTrail             │
-                 └──────────────────────────────────────────┘
-```
+## What MeshCFO Does
 
-### Session Flow
+Three specialist agents collaborate on a shared context engine through visible expansion/compression reasoning cycles. Every session is wrapped in the **Consensus Hardening Protocol (CHP)** — foundation disclosure, adversarial assumption attacks, R0 gate checks, and explicit lock progression.
 
 ```
-brief
-  |
-  v
-build DecisionCase + Dossier --> CHP foundation disclosure + attack
-  |                              R0 gate + parity assessment
-  v                              initial PAYLOAD envelope
-seed shared ContextEngine
-  |
-  v
-EnterpriseOrchestrator
-  +-- Finance agent     (produces budget_envelope, roi_model)
-  +-- Strategy agent    (consumes budget_envelope; produces market_positioning)
-  +-- Compliance agent  (consumes both; produces risk_register, mitigations)
-  |
-  v
-foundation PASS + no failure mode  -->  status = PROVISIONAL_LOCK
-  |
-  v
-synthesize CFO artifact (Forecast / Investment / Board)
-  + AuditTrail linking every claim to expansion step + grounding + CHP findings
-  |
-  v
-third-party validation  -->  status = LOCKED
+brief → DecisionCase + CHP foundation disclosure + attack
+      → seed shared ContextEngine
+      → EnterpriseOrchestrator (Finance → Strategy → Compliance)
+      → synthesize CFO artifact + AuditTrail
+      → third-party validation → LOCKED
 ```
 
-## Tech Stack
+### The Three Agents
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Python 3.10+ |
-| Data Modeling | dataclasses (stdlib) |
-| Context Engine | Custom entity/event/task graph with cosine dedup |
-| Agent Protocol | Cognitive Mesh Protocol (expansion/compression cycles) |
-| Decision Governance | Consensus Hardening Protocol (CHP) |
-| Database | [SpacetimeDB](https://spacetimedb.com) v2.4 (was CockroachDB) |
-| CLI | argparse (stdlib), entry point `cfo-os` |
-| Testing | pytest 8.0+ |
+| Agent | Produces | Consumes |
+|---|---|---|
+| **Finance** | Budget envelope, ROI model | Raw brief |
+| **Strategy** | Market positioning, go-to-market | Budget envelope |
+| **Compliance** | Risk register, mitigations | Both |
 
-## Why SpacetimeDB?
+### What Makes This Different
 
-The Multi-Agent CFO OS was originally backed by CockroachDB — a solid distributed SQL database for OLTP workloads. But the architecture points in a fundamentally different direction: **real-time multi-agent collaboration with live audit trails and synchronous state propagation across agents.** SpacetimeDB was chosen for four reasons:
+- **Per-claim provenance**: Every line in the final artifact traces back to the agent, expansion step, grounding source, and CHP finding
+- **CHP governance**: Foundation disclosure → adversarial attack → R0 gate → lock progression (EXPLORING → PROVISIONAL_LOCK → LOCKED)
+- **SpacetimeDB**: Real-time shared context, live audit trail subscriptions, zero DevOps
+- **Self-improving playbooks**: Each agent owns a playbook with delta-only updates (ADD, INCREMENT, MERGE, PRUNE)
 
-### 1. Agents Need Real-Time Shared Context, Not a Query Layer
+---
 
-The Cognitive Mesh requires Finance, Strategy, and Compliance agents to read and write to a shared context engine in sequence. With CockroachDB, this meant SQLAlchemy ORM calls, connection pooling, and query latency between every agent turn. With SpacetimeDB, agents connect directly as clients and write to shared tables via reducers. State changes propagate instantly — the `SharedContextEntity` table updates are visible to the next agent in the topological chain immediately, with zero database round-trip overhead beyond the reducer call.
+## Three CFO Task Types
 
-### 2. The CHP State Machine Maps Perfectly to SpacetimeDB Reducers
+| Task | Output | Use Case |
+|------|--------|----------|
+| **Forecast** | Driver-based operating plan with stress views | FY planning, budget cycles |
+| **Investment Case** | Capital allocation memo with milestone-gated release | Fund requests, board approvals |
+| **Board Output** | Decision packet with ranked options and dissent surface | Board meetings, committee reviews |
 
-The Consensus Hardening Protocol has explicit state transitions: `EXPLORING → PROVISIONAL → PROVISIONAL_LOCK → LOCKED`. In SpacetimeDB, the `update_decision_state` reducer atomically reads the current `DecisionCase` status, validates the transition, and writes the new state — all within a single ACID transaction. No ORM transaction management, no migration scripts, no connection pooling.
+---
 
-### 3. Audit Trail as a Live Subscription Stream
-
-The `AuditEntry` table records every claim, grounding, and CHP finding with full provenance. Previously, the audit trail was written to CockroachDB and only visible when someone ran a query. With SpacetimeDB, the audit trail is a **subscription stream** — dashboards, compliance tools, and board portals can subscribe to `AuditEntry` for a specific `decision_id` and see every new finding appear in real-time as agents deliberate.
-
-### 4. Single Binary, Zero DevOps
-
-```
-Before: Python agents + CockroachDB cluster + SQLAlchemy ORM + connection pooling + schema migrations
-After:  Python agents + single SpacetimeDB module (with the SpacetimeClient SDK)
-```
-
-The entire database layer is now a SpacetimeDB Rust module at `spacetime/spacetimedb/` with a Python SDK client at `spacetime/client.py`. The `SpacetimeClient` class wraps table operations and reducers so the existing `cme` package can be adapted with minimal changes. A `migrate_from_cockroach()` method provides a clean migration path for existing data.
-
-### 5. Multi-User Collaboration Becomes Trivial
-
-What was a single-user CLI tool becomes a multi-user system for free. Multiple instances of the CLI (or a future web frontend) can subscribe to the same `Brief` table and see new CFO tasks appear instantly. The SpacetimeDB identity system provides per-user authentication built-in.
-
-## Key Features
-
-- **Three Specialist Agents** -- Finance, Strategy, and Compliance agents collaborate on a shared ContextEngine with topological sequencing so producers run before consumers. Each agent implements the full Cognitive Mesh Protocol with visible expand/compress reasoning cycles.
-
-- **Cognitive Mesh Protocol** -- Every agent turn runs through a visible breathing cycle: Expansion (Reframe, Constraints, Alternatives, Assumptions, Edge cases, Cross-domain analogy), then Compression (Integrate, Commit). Each claim is tagged as verified, inferred, or pattern-match.
-
-- **Self-Improving Playbooks** -- Each agent owns a playbook (not just a prompt) with six sections. Updates are delta-only (ADD, INCREMENT, MERGE, PRUNE). After every turn, a Reflector turns the trajectory into insights and a Curator turns insights into targeted playbook amendments.
-
-- **Consensus Hardening Protocol** -- Decision governance layer wrapping every CFO session: Dossier, FoundationDisclosure (weakest assumptions, invalidation conditions), FoundationAttack (assumption attacks, vulnerability strikes, foundation_score 0-100), R0 gate (solvable/scoped/valid/worth_it), and multi-round payload envelopes for cross-model exchange.
-
-- **Explicit Lock Progression** -- Decisions advance through EXPLORING, PROVISIONAL_LOCK, and LOCKED states. PROVISIONAL_LOCK requires foundation pass and no agent failure modes. LOCKED requires third-party validation confirmation.
-
-- **Audit Trail** -- Every claim in the final artifact traces back to the producing agent, expansion step, grounding source/confidence, and CHP foundation findings that hardened or weakened it.
-
-- **Three CFO Task Types** -- Forecast (driver-based operating plans with stress views), Investment Case (capital allocation memos with milestone-gated release), and Board Output (decision packets with ranked options and dissent surface).
-
-- **Context Engine** -- Layered short/long-term memory with fixed-schema entity/event/task model. Context is selected by combined score (semantic relevance 50%, recency 20%, importance 20%, frequency 10%) with cosine deduplication.
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.10 or higher
-- pip (Python package manager)
-
-### Installation
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/icohangar-ops/multi-agent-cfo-os.git
-cd multi-agent-cfo-os
-
-# Install in editable mode
+git clone https://github.com/icohangar-ops/meshcfo.git
+cd meshcfo
 pip install -e .
-```
 
-### Quick Start
-
-Run a full CFO OS investment case session from the command line:
-
-```bash
+# Run an investment case
 cfo-os cfo-os --task investment_case \
   --title "Fund enterprise tier Q3" \
   --company "Acme" \
@@ -166,12 +80,9 @@ cfo-os cfo-os --task investment_case \
   --current-runway 18 \
   --upside "Higher ACV" --upside "Lower strategic-account churn" \
   --risk "Adoption lag" --risk "Implementation complexity"
-```
 
-Run a forecast session without installing:
-
-```bash
-PYTHONPATH=src python3 -m cme.cli cfo-os --task forecast \
+# Run a forecast
+cfo-os cfo-os --task forecast \
   --title "FY26 driver-based plan" \
   --company "Acme" \
   --problem "Build the FY26 driver-based operating plan with stress views." \
@@ -179,50 +90,9 @@ PYTHONPATH=src python3 -m cme.cli cfo-os --task forecast \
   --growth-pct 0.28 --churn-pct 0.09
 ```
 
-## Usage
+---
 
-### CLI Commands
-
-```bash
-# Run a full CFO OS session (forecast, investment_case, or board_output)
-cfo-os cfo-os \
-  --task {forecast,investment_case,board_output} \
-  --title TITLE \
-  --company COMPANY \
-  --problem PROBLEM \
-  --priority X --constraint Y \
-  [--out-md PATH] [--json]
-
-# Base mesh orchestration on a problem
-cfo-os demo [PROBLEM]
-
-# Show a seeded agent playbook
-cfo-os playbook {finance,strategy,compliance}
-
-# Dump the seeded organizational context
-cfo-os context
-
-# Start a raw CHP capital allocation session
-cfo-os chp-start \
-  --title TITLE --company COMPANY --problem PROBLEM \
-  --amount AMOUNT --payback-months MONTHS \
-  --current-runway MONTHS
-
-# Attach a partner packet to an existing CHP decision
-cfo-os chp-receive \
-  --decision-id ID --packet-file FILE \
-  --phase {0,1,2} --round N
-
-# Apply third-party validation to advance to LOCKED
-cfo-os chp-validate \
-  --decision-id ID \
-  --validator NAME --item ITEM \
-  --challenge "Stress test" \
-  --result {CONFIRM,REJECT} \
-  --rationale "Explanation..."
-```
-
-### Programmatic API
+## Programmatic API
 
 ```python
 from cme.cfo_os import CFOOperatingSystem, InvestmentBrief
@@ -256,79 +126,94 @@ cfo.lock(
 )
 ```
 
-### Running Tests
+---
+
+## Why SpacetimeDB?
+
+| Before (CockroachDB) | After (SpacetimeDB) |
+|---|---|
+| SQLAlchemy ORM + connection pooling + query latency between agent turns | Agents connect directly as clients; state propagates instantly |
+| Audit trail written to DB, visible only on query | Audit trail is a **subscription stream** — dashboards see findings appear in real-time |
+| Migration scripts, schema management | Single binary, zero DevOps |
+| Single-user CLI | Multi-user collaboration for free (identity system built-in) |
+
+---
+
+## Architecture
+
+```
+                    ┌──────────────────────────────┐
+  ┌── shared ─────> │       ContextEngine           │ <───── shared ──────┐
+  │                  │  (entities / events / tasks   │                      │
+  │                  │   + short / long memory)       │                      │
+  │                  └──────────────────────────────┘                      │
+  v                                                                        v
+┌────────────────────┐  ┌────────────────────┐  ┌────────────────────────┐
+│ Finance Agent       │  │ Strategy Agent     │  │ Compliance Agent      │
+│  ├─ Playbook (ACE)  │  │  ├─ Playbook (ACE) │  │  ├─ Playbook (ACE)   │
+│  └─ Protocol (CMP)  │  │  └─ Protocol (CMP) │  │  └─ Protocol (CMP)   │
+└─────────────────────┘  └────────────────────┘  └────────────────────────┘
+        │                          │                          │
+        v                          v                          v
+   budget_envelope          market_positioning           risk_register
+        │                          │                          │
+        └──────────────┬───────────┴──────────────┬──────────┘
+                       v                          v
+              ┌──────────────────────────────────────────┐
+              │         CFOOperatingSystem               │
+              │  1. CHP DecisionCase + Foundation        │
+              │  2. EnterpriseOrchestrator (Mesh)        │
+              │  3. Lock progression (EXPLORING > LOCK)  │
+              │  4. CFOArtifact + AuditTrail             │
+              └──────────────────────────────────────────┘
+```
+
+---
+
+## Key Features
+
+| Feature | What It Does |
+|---|---|
+| **Cognitive Mesh Protocol** | Visible expand/compress reasoning cycles with verified/inferred/pattern-match tagging |
+| **Consensus Hardening Protocol** | Foundation disclosure → adversarial attack → R0 gate → lock progression |
+| **Self-Improving Playbooks** | Delta-only updates after every turn (ADD, INCREMENT, MERGE, PRUNE) |
+| **Per-Claim Audit Trail** | Every line traces to agent + grounding + CHP finding |
+| **Context Engine** | Entity/event/task graph with cosine dedup and combined scoring (semantic 50%, recency 20%, importance 20%, frequency 10%) |
+| **SpacetimeDB** | Real-time subscriptions, live audit streams, zero DevOps |
+
+---
+
+## Project Structure
+
+```
+meshcfo/
+├── src/
+│   ├── cme/
+│   │   ├── cli.py              # CLI entry point
+│   │   ├── agent.py            # MeshAgent base class
+│   │   ├── protocol.py         # Cognitive Mesh Protocol
+│   │   ├── context.py          # ContextEngine
+│   │   ├── playbook.py         # Playbook + Reflector + Curator
+│   │   ├── chp/                # Consensus Hardening Protocol
+│   │   ├── cfo_os/             # CFOOperatingSystem capstone
+│   │   └── db/                 # SpacetimeDB persistence
+│   └── demo/                   # Finance, Strategy, Compliance agents
+├── spacetime/                  # SpacetimeDB Rust module + Python client
+├── tests/                      # pytest suite
+└── examples/                   # CLI invocations
+```
+
+---
+
+## Running Tests
 
 ```bash
 pip install pytest
 PYTHONPATH=src pytest tests/ -v
 ```
 
-## Project Structure
-
-```
-Multi-agent-CFO-OS/
-├── pyproject.toml              # Package config (entry point: cfo-os)
-├── requirements.txt            # Runtime dependencies
-├── LICENSE                     # MIT license
-├── examples/
-│   └── cfo_os_examples.sh      # Example CLI invocations
-├── src/
-│   ├── cme/
-│   │   ├── __init__.py
-│   │   ├── cli.py              # CLI entry point (all subcommands)
-│   │   ├── agent.py            # MeshAgent base class + TurnResult
-│   │   ├── protocol.py         # Cognitive Mesh Protocol (expand/compress)
-│   │   ├── context.py          # ContextEngine (entity/event/task graph)
-│   │   ├── playbook.py         # Playbook + Reflector + Curator (ACE)
-│   │   ├── bridge.py           # BridgeFramework (Statement + Workflow)
-│   │   ├── orchestrator.py     # EnterpriseOrchestrator (topological sequencing)
-│   │   ├── chp/
-│   │   │   ├── models.py       # DecisionCase, Phase, Verdict, SessionStatus
-│   │   │   ├── foundation.py   # Foundation disclosure/attack/verdict
-│   │   │   ├── gates.py        # R0 gate evaluation
-│   │   │   ├── parity.py       # Model parity assessment
-│   │   │   ├── payloads.py     # Payload envelope (BEGIN/END)
-│   │   │   ├── rounds.py       # RoundRecord management
-│   │   │   ├── registry.py     # DecisionRegistry (JSON persistence)
-│   │   │   ├── validators.py   # Third-party validation
-│   │   │   ├── dossier.py      # Dossier builder
-│   │   │   ├── devil.py        # Adversarial devil's advocate
-│   │   │   └── orchestrator.py # CHPOrchestrator (session lifecycle)
-│   │   ├── cfo_os/
-│   │   │   ├── briefs.py       # ForecastBrief, InvestmentBrief, BoardBrief
-│   │   │   ├── dossier_builders.py  # Brief -> CHP DecisionCase
-│   │   │   ├── artifacts.py    # ForecastPack, InvestmentCaseMemo, BoardOutput
-│   │   │   ├── audit.py        # AuditTrail (per-claim provenance)
-│   │   │   └── orchestrator.py # CFOOperatingSystem (capstone orchestrator)
-│   │   ├── finance/
-│   │   │   └── capital_allocation.py  # Capital allocation case builder
-│   │   └── db/
-│   │       └── cockroachdb_layer.py   # CockroachDB persistence
-│   └── demo/
-│       ├── finance_agent.py    # Finance agent implementation
-│       ├── strategy_agent.py   # Strategy agent implementation
-│       └── compliance_agent.py # Compliance agent implementation
-└── tests/
-    ├── test_chp_basics.py
-    ├── test_chp_capital_flow.py
-    ├── test_chp_registry_cli_flow.py
-    ├── test_cfo_os.py
-    └── test_mesh.py
-```
-
-## Contributing
-
-Contributions are welcome. To contribute:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make your changes and add tests where applicable
-4. Run the test suite to ensure all tests pass (`PYTHONPATH=src pytest tests/ -v`)
-5. Commit your changes with descriptive messages
-6. Open a Pull Request against the `main` branch
-
-Please ensure all new code includes appropriate test coverage and follows the existing code style.
+---
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
+MIT. See [`LICENSE`](./LICENSE).
